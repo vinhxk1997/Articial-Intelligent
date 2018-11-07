@@ -18,7 +18,7 @@ public class AStar {
 	PriorityQueue<Vertex> listOpen;
 	ArrayList<Vertex> listClose;
 	HashMap<String, String> vertexHistory;
-		
+	
 	public static void main(String[] args) {
 		String fileName = "findWay-v3.txt";
 		ArrayList<Edge> listEdge = new ArrayList<>();
@@ -29,12 +29,12 @@ public class AStar {
 			String line;
 			fileReader = new FileReader(fileName);
 			bufferedReader = new BufferedReader(fileReader);
-			// đọc đỉnh đến khi gặp dòng edge
+			// đọc đỉnh đến khi gặp 'edge'
 			while ((line = bufferedReader.readLine()).equals("edge") != true) {
 				String[] data = line.split(" ");
 				listVertex.add(new Vertex(data[0], Integer.parseInt(data[1])));
 			}
-			// đọc cạnh đến khi hết file
+			// đọc cạnh
 			while ((line = bufferedReader.readLine()) != null) {
 				String[] data = line.split(" ");
 				listEdge.add(new Edge(data[0], data[1], Integer.parseInt(data[2])));
@@ -45,7 +45,7 @@ public class AStar {
 		}
 		// Arad là đỉnh đầu, Bucharest là đỉnh kết
 		AStar astar = new AStar(listEdge, listVertex, "Arad", "Bucharest");
-		astar.doSearch();
+		astar.astarSearch();
 	}
 	
 	public AStar(ArrayList<Edge> listEdge, ArrayList<Vertex> listVertex, String start, String end) {
@@ -56,11 +56,11 @@ public class AStar {
 		this.listVertex = listVertex;
 		this.startVertex = findVertex(start);
 		// đặt khoảng cách từ điếm đầu đến chính nó bằng 0
-		startVertex.distStart = 0;
+		startVertex.distMin = 0;
 		this.endVertex = findVertex(end);
 	}
 	
-	void doSearch(){
+	void astarSearch(){
 		// thêm điểm đầu vào danh sách chờ duyệt
 				listOpen.add(startVertex);
 				// thêm điểm đầu vào lịch sử đường đi
@@ -78,13 +78,13 @@ public class AStar {
 					// list các đỉnh kề với đỉnh hiện tại
 					ArrayList<Vertex> newVertexs = new ArrayList<>();
 					for (Edge edge : listEdge) {
-						// thêm đỉnh thứ 2 của cung đường đi vào list kề nếu điểm đang xét là đỉnh đầu
-						// của cung
+						/*thêm đỉnh thứ 2 của cung đường đi vào list kề nếu điểm đang xét là đỉnh đầu
+						 của cung*/
 						if (edge.v1.equals(currVertex.name) == true) {
 							Vertex vertex = findVertex(edge.v2);
 							newVertexs.add(vertex);
-							// thêm đỉnh đầu của cung đường đi vào list kề nếu điểm đang xét là đỉnh thứ 2
-							// của cung
+							/* thêm đỉnh đầu của cung đường đi vào list kề nếu điểm đang xét là đỉnh thứ 2
+							 của cung*/
 						} else if (edge.v2.equals(currVertex.name) == true) {
 							Vertex vertex = findVertex(edge.v1);
 							newVertexs.add(vertex);
@@ -96,14 +96,15 @@ public class AStar {
 	
 	private void addToOpenList(ArrayList<Vertex> newVertexs, Vertex oldVertex) {
 		for (Vertex vertex : newVertexs) {
+			int a = oldVertex.distMin + getDist(vertex.name, oldVertex.name);
 			//nếu đỉnh đang xét đã có trong listOpen (1 đỉnh có thể kề nhiều đỉnh)
 			if (listOpen.contains(vertex)) {
-				// nếu khoảng cách ngắn nhất từ điểm đầu đến điểm hiện tại lớn hơn tổng của khoảng cách ngắn
-				// nhất đến điểm trước và độ dài cung đường đi nối điểm trước đến điểm hiện tại
-				// thì cập nhật lại khoảng cách ngắn nhất
-				if (vertex.distStart > oldVertex.distStart + getDist(vertex.name, oldVertex.name)) {
-					vertex.distStart = oldVertex.distStart + getDist(vertex.name, oldVertex.name);
-					vertex.h = vertex.distStart + vertex.distEnd;
+				/* nếu khoảng cách ngắn nhất từ điểm đầu đến điểm hiện tại lớn hơn tổng của khoảng cách ngắn
+				 nhất đến điểm trước + độ dài cung đường đi nối điểm trước đến điểm hiện tại
+				 thì cập nhật lại khoảng cách ngắn nhất*/				
+				if (vertex.distMin > a) {
+					vertex.distMin = a;
+					vertex.h = vertex.distMin + vertex.distEnd;
 					//thêm đỉnh hiện tại vào map đường đi truy vết nếu đường đi này chưa tồn tại
 					if (!vertexHistory.containsKey(vertex.name))
 						vertexHistory.put(vertex.name, oldVertex.name);
@@ -112,8 +113,8 @@ public class AStar {
 			//nếu đỉnh hiện tại chưa có trong listOpen
 			if (!listOpen.contains(vertex)) {
 				//cập nhật lại khoảng cách ngắn nhất đến điểm hiện tại (mặc định là dương vô cùng)
-				vertex.distStart = oldVertex.distStart + getDist(vertex.name, oldVertex.name);
-				vertex.h = vertex.distStart + vertex.distEnd;
+				vertex.distMin = a;
+				vertex.h = vertex.distMin + vertex.distEnd;
 				//thêm đỉnh hiện tại vào map đường đi truy vết
 				if (!vertexHistory.containsKey(vertex.name)) {
 					vertexHistory.put(vertex.name, oldVertex.name);
@@ -122,16 +123,15 @@ public class AStar {
 			}
 			//nếu đỉnh hiện tại đã có trong listClose (những điểm đã xét xong)
 			if (listClose.contains(vertex)) {
-				// nếu khoảng cách ngắn nhất đến điểm hiện tại lớn hơn tổng khoảng cách ngắn
-				// nhất đến điểm trc và độ dài cung đường đi nối điểm trước đến điểm hiện tại
-				// thì xóa khỏi listClose và thêm lại vào listOpen để xét lại
-				if (vertex.distStart > oldVertex.distStart + getDist(vertex.name, oldVertex.name)) {
+				/* nếu khoảng cách ngắn nhất đến điểm hiện tại lớn hơn tổng khoảng cách ngắn
+				 nhất đến điểm trc + độ dài cung đường đi nối điểm trước đến điểm hiện tại
+				 thì xóa khỏi listClose và thêm lại vào listOpen để xét lại*/
+				if (vertex.distMin > a) {
 					listOpen.add(vertex);
 					listClose.remove(vertex);
 				}
 			}
 		}
-		System.out.println();
 	}
 
 	void printSolution() {
@@ -200,7 +200,7 @@ public class AStar {
 	public static class Vertex implements Comparable<Vertex> {
 		public String name;
 
-		public int distStart = Integer.MAX_VALUE;
+		public int distMin = Integer.MAX_VALUE;
 
 		public int distEnd;
 
@@ -223,7 +223,7 @@ public class AStar {
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + distStart;
+			result = prime * result + distMin;
 			result = prime * result + distEnd;
 			result = prime * result + h;
 			result = prime * result + ((name == null) ? 0 : name.hashCode());
@@ -239,7 +239,7 @@ public class AStar {
 			if (getClass() != obj.getClass())
 				return false;
 			Vertex other = (Vertex) obj;
-			if (distStart != other.distStart)
+			if (distMin != other.distMin)
 				return false;
 			if (distEnd != other.distEnd)
 				return false;
@@ -254,3 +254,4 @@ public class AStar {
 		}
 	}
 }
+
